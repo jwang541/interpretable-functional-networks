@@ -30,8 +30,8 @@ if __name__ == '__main__':
 
     # train mode arguments
     train_mode_args = parser.add_mutually_exclusive_group(required=True)
-    train_mode_args.add_argument('-p', '--pretrain', action='store_true', help='pretrain the model')
-    train_mode_args.add_argument('-f', '--finetune', action='store_true', help='finetune the model')
+    train_mode_args.add_argument('-p', '--pretrain', type=str, action='store_true', help='pretrain the model')
+    train_mode_args.add_argument('-f', '--finetune', type=str, action='store_true', help='finetune the model')
 
     # hyperparameter arguments
     parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
@@ -47,6 +47,7 @@ if __name__ == '__main__':
     print('learning rate:', args.lr)
     if args.finetune:
         print('sparsity trade-off:', args.trade_off)
+    print()
 
     ###################################################################################################################
 

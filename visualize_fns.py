@@ -1,4 +1,4 @@
-import sys
+import argparse
 
 import matplotlib.pyplot as plt
 import torch
@@ -8,27 +8,36 @@ from models import Model
 
 
 
-# Usage: python visualize_fns.py <WEIGHTS FILENAME>.pt
+# Usage: python visualize_fns.py -w WEIGHTS -d DATASET [-s SUBJECT]
 
 if __name__ == '__main__':
 
-    # get weights path
-    if len(sys.argv) != 2:
-        raise Exception('Usage: python visualize_fns.py <WEIGHTS FILENAME>.pt')
-    weights_path = sys.argv[1]
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-w', '--weights', type=str, help='model weights (.pt file)', required=True)
+    parser.add_argument('-d', '--dataset', type=str, help='simtb .nii dataset', required=True)
+    parser.add_argument('-s', '--subject', type=int, help='subject index', default=0)
+
+    # parse and print command line arguments
+    args = parser.parse_args()
+    print('weights path:', args.weights)
+    print('dataset path:', args.dataset)
+    print('subject #:', args.subject)
+    print()
+
+    ###################################################################################################################
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     with torch.no_grad():
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         model = Model(k_maps=20)
-        model.load_state_dict(torch.load(weights_path))
+        model.load_state_dict(torch.load(args.weights))
         model = model.to(device)
-
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset('./data/simtb_data', train=False, print_params=False)
-        mri, mask = testset.__getitem__(13)
+        testset = NiiDataset(args.dataset, train=False, print_params=False)
+        mri, mask = testset.__getitem__(args.subject)
         mri = torch.unsqueeze(mri, dim=0).float().to(device)
         mask = torch.unsqueeze(mask, dim=0).float().to(device)
 
