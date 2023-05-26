@@ -1,0 +1,28 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from .parts import UNet, SCSqueezeExcitation3D
+
+
+    
+# Takes fMRI data of dimension (T, 1, D, H, W) and produces a feature map of 
+# dimension (K, D, H, W).
+class Model(nn.Module):
+    def __init__(self, k_maps, eps=1e-8):
+        super().__init__()
+        self.k_maps = k_maps
+        self.eps = eps
+
+        self.unet = UNet(k_maps=16, eps=eps)
+        self.conv_out = nn.Conv3d(16, k_maps, kernel_size=3, stride=1, padding=1, bias=False)
+        self.scse = SCSqueezeExcitation3D(in_channels=k_maps, channel_neurons=16)
+
+        nn.init.trunc_normal_(self.conv_out.weight, std=0.01, a=-0.02, b=0.02)
+
+    def forward(self, x):
+        x = self.unet(x)
+        x = F.relu(self.conv_out(x))
+        x = self.scse(x)
+        x = torch.mean(x, dim=0)
+        return x
