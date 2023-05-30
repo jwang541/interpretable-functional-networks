@@ -1,14 +1,16 @@
 import argparse
+import random
 
 import matplotlib.pyplot as plt
 import torch
+import pandas as pd
 
 from datasets import NiiDataset
 from models import Model
 
 
 
-# Usage: python visualize_fns.py -w WEIGHTS -d DATASET [-s SUBJECT]
+# Usage: python visualize_attention.py -w WEIGHTS -d DATASET [-s SUBJECT]
 
 if __name__ == '__main__':
 
@@ -30,7 +32,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     with torch.no_grad():
-        model = Model(k_maps=20)
+        model = Model(k_maps=20, debug=True)
         model.load_state_dict(torch.load(args.weights))
         model = model.to(device)
         model.eval()
@@ -44,15 +46,33 @@ if __name__ == '__main__':
         model_in = torch.unsqueeze(mri[0], dim=1) * mask[0]
         model_out = model(model_in) * mask[0]
 
+        model_in = model_in.cpu()
         model_out = model_out.cpu()
 
-        # visualize learned FNs of a single subject
-        fig, axes = plt.subplots(4, 5, figsize=(10, 8))
+        raw_attention = model.attention.last
+        col_max, _ = torch.max(raw_attention, dim=0)
+        normalized_attention = raw_attention / col_max
+
+        torch.set_printoptions(profile='full')
+        torch.set_printoptions(linewidth=10000)
+        print(normalized_attention)
+
+        frame = pd.DataFrame(normalized_attention.cpu().numpy()).astype('float')
+        
+        pd.options.display.float_format = '{:,.3f}'.format
+        pd.set_option('display.max_rows', None)
+        print(frame)
+
+        # display 20 randomly selected time points
+        tps = random.sample(range(model_in.shape[0]), min(30, model_in.shape[0]))
+        tps.sort()
+
+        fig, axes = plt.subplots(5, 6, figsize=(8, 8))
         axes = axes.flatten()
-        for i in range(20):
-            axes[i].imshow(model_out[i, 0], cmap='gray')
+        for i in range(len(tps)):
+            axes[i].imshow(model_in[tps[i], 0, 0], cmap='gray')
             axes[i].axis('off')
-            axes[i].set_title('FN {}'.format(i), fontsize=10, pad=2)
+            axes[i].set_title('t={}'.format(tps[i]), fontsize=10, pad=2)
         plt.tight_layout()
         plt.show()
 

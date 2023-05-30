@@ -7,7 +7,7 @@ import torch.nn.functional as F
 # Implements the Squeeze-and-Excitation block proposed in "Squeeze-and-Excitation Networks" (Hu et al.)
 # for an input with 3 spatial dimensions.
 class SqueezeExcitation3D(nn.Module):
-    def __init__(self, in_channels, channels, out_activation='sigmoid'):
+    def __init__(self, in_channels, channels, out_activation='sigmoid', debug=False):
         super().__init__()
         self.in_channels = in_channels
         self.channels = channels
@@ -26,22 +26,16 @@ class SqueezeExcitation3D(nn.Module):
             out_activation_layer
         )
 
-        self.ct = 0
+        self.debug = debug
+        self.last = None
     
     def forward(self, x):
         z_channel = torch.mean(x, dim=(2, 3, 4))
         s_channel = self.se(z_channel)
         x_channel = torch.einsum('ncxyz, nc -> ncxyz', x, s_channel)
 
-        torch.set_printoptions(profile="full")
-        torch.set_printoptions(linewidth=10000)
-
-        col_max, _ = torch.max(s_channel, dim=0)
-        normalized_ta = s_channel / col_max
-        print(normalized_ta)
-        # self.ct += 1
-        # if self.ct % 20 == 0:
-            # print(torch.min(normalized_ta).item())
+        if self.debug:
+            self.last = s_channel.clone().detach()
 
         return x_channel
 
