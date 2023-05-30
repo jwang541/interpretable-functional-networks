@@ -43,7 +43,10 @@ if __name__ == '__main__':
             num_workers=4
         )
 
+        ###############################################################################################################
+
         # Test 1: evaluate data reconstruction loss on testing dataset
+        
         print('- Data reconstruction loss -')
         model_outputs = []
         eval_loss = 0
@@ -72,7 +75,10 @@ if __name__ == '__main__':
         print('Average: ', eval_loss / len(testset))
         print()
 
+        ###############################################################################################################
+
         # Test 2: compare to simtb ground truth FNs (all testset subjects)
+
         print('- Ground truth spatial correlation -')
         correlations = np.zeros(shape=(20, 20))
 
@@ -131,4 +137,6 @@ if __name__ == '__main__':
             print('Average\t\tBASE {:.5f}'.format(sum_correlations / 20.0))
             print()
 
-        exit(0)
+        ###############################################################################################################
+
+        # Test 3: analyze attention scores

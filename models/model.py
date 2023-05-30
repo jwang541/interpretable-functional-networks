@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .parts import UNet, SCSqueezeExcitation3D
+from .parts import UNet, SqueezeExcitation3D, SCSqueezeExcitation3D
 
 
     
@@ -16,13 +16,13 @@ class Model(nn.Module):
 
         self.unet = UNet(k_maps=16, eps=eps)
         self.conv_out = nn.Conv3d(16, k_maps, kernel_size=3, stride=1, padding=1, bias=False)
-        self.scse = SCSqueezeExcitation3D(in_channels=k_maps, channel_neurons=16)
+        self.attention = SqueezeExcitation3D(in_channels=k_maps, channels=16, out_activation='sigmoid')
 
         nn.init.trunc_normal_(self.conv_out.weight, std=0.01, a=-0.02, b=0.02)
 
     def forward(self, x):
         x = self.unet(x)
         x = F.relu(self.conv_out(x))
-        x = self.scse(x)
+        x = self.attention(x)
         x = torch.mean(x, dim=0)
         return x

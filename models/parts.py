@@ -4,6 +4,49 @@ import torch.nn.functional as F
 
 
 
+# Implements the Squeeze-and-Excitation block proposed in "Squeeze-and-Excitation Networks" (Hu et al.)
+# for an input with 3 spatial dimensions.
+class SqueezeExcitation3D(nn.Module):
+    def __init__(self, in_channels, channels, out_activation='sigmoid'):
+        super().__init__()
+        self.in_channels = in_channels
+        self.channels = channels
+
+        if out_activation == 'sigmoid':
+            out_activation_layer = nn.Sigmoid()
+        elif out_activation == 'softmax':
+            out_activation_layer = nn.Softmax(dim=1)
+        else:
+            raise Exception('invalid out activation: ', out_activation)
+        
+        self.se = nn.Sequential(
+            nn.Linear(in_channels, channels, bias=True),
+            nn.ReLU(),
+            nn.Linear(channels, in_channels, bias=True),
+            out_activation_layer
+        )
+
+        self.ct = 0
+    
+    def forward(self, x):
+        z_channel = torch.mean(x, dim=(2, 3, 4))
+        s_channel = self.se(z_channel)
+        x_channel = torch.einsum('ncxyz, nc -> ncxyz', x, s_channel)
+
+        torch.set_printoptions(profile="full")
+        torch.set_printoptions(linewidth=10000)
+
+        col_max, _ = torch.max(s_channel, dim=0)
+        normalized_ta = s_channel / col_max
+        print(normalized_ta)
+        # self.ct += 1
+        # if self.ct % 20 == 0:
+            # print(torch.min(normalized_ta).item())
+
+        return x_channel
+
+
+
 # Implements the scSE (spatial and channel Squeeze-and-Excitation) block proposed in "Recalibrating Fully
 # Convolutional Networks with Spatial and Channel ‘Squeeze & Excitation’ Blocks" (Roy et al.) for an input
 # with 3 spatial dimensions.

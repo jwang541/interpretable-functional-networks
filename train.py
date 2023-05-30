@@ -133,4 +133,4 @@ if __name__ == '__main__':
         print('[{}]\t\ttrain loss: {:.3f}\t\teval loss: {:.3f}'
               .format(epoch + 1, train_loss / len(trainloader.dataset), eval_loss / len(testloader.dataset)))
 
-    torch.save(model.state_dict(), './out/e{}.pt'.format(300))
+    torch.save(model.state_dict(), './out/e{}.pt'.format(args.epochs))
