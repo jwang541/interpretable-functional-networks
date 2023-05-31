@@ -53,10 +53,6 @@ if __name__ == '__main__':
         col_max, _ = torch.max(raw_attention, dim=0)
         normalized_attention = raw_attention / col_max
 
-        torch.set_printoptions(profile='full')
-        torch.set_printoptions(linewidth=10000)
-        print(normalized_attention)
-
         frame = pd.DataFrame(normalized_attention.cpu().numpy()).astype('float')
         
         pd.options.display.float_format = '{:,.3f}'.format
