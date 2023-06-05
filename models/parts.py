@@ -4,6 +4,13 @@ import torch.nn.functional as F
 
 
 
+# Exponential activation function
+class Exponential(nn.Module):
+    def forward(self, x):
+        return torch.exp(x)
+
+
+
 # Implements the Squeeze-and-Excitation block proposed in "Squeeze-and-Excitation Networks" (Hu et al.)
 # for an input with 3 spatial dimensions.
 class SqueezeExcitation3D(nn.Module):
@@ -16,6 +23,8 @@ class SqueezeExcitation3D(nn.Module):
             out_activation_layer = nn.Sigmoid()
         elif out_activation == 'softmax':
             out_activation_layer = nn.Softmax(dim=1)
+        elif out_activation == 'exponential':
+            out_activation_layer = Exponential()
         else:
             raise Exception('invalid out activation: ', out_activation)
         
