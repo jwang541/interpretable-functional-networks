@@ -41,16 +41,15 @@ if __name__ == '__main__':
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset(args.dataset, train=False, print_params=False)
+        testset = NiiDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
         mri, mask = testset.__getitem__(args.subject)
         mri = torch.unsqueeze(mri, dim=0).float().to(device)
         mask = torch.unsqueeze(mask, dim=0).bool().to(device)
 
-        model_in = torch.unsqueeze(mri[0], dim=1) * mask[0]
-        model_out = model(model_in) * mask[0]
+        model_out = model(mri[0], mask[0])
 
         mask = torch.reshape(mask, (-1,))
-        x = torch.reshape(model_in, (model_in.shape[0], -1))
+        x = torch.reshape(mri[0], (mri[0].shape[0], -1))
         y = torch.reshape(model_out, (model_out.shape[0], -1))
 
         x = x[:, mask].cpu().numpy()
@@ -67,9 +66,18 @@ if __name__ == '__main__':
                 correlations[i, j] = r
 
         frame = pd.DataFrame(correlations).astype('float')
-        
         pd.options.display.float_format = '{:,.3f}'.format
         pd.set_option('display.max_rows', None)
+        print('- Correlations -')
+        print(frame)
+
+        explained_variance = np.square(correlations)
+        explained_variance = explained_variance / explained_variance.max(axis=0)
+
+        frame = pd.DataFrame(explained_variance).astype('float')
+        pd.options.display.float_format = '{:,.5f}'.format
+        pd.set_option('display.max_rows', None)
+        print('- Scaled r^2 -')
         print(frame)
 
 

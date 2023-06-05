@@ -38,15 +38,14 @@ if __name__ == '__main__':
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset(args.dataset, train=False, print_params=False)
+        testset = NiiDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
         mri, mask = testset.__getitem__(args.subject)
         mri = torch.unsqueeze(mri, dim=0).float().to(device)
         mask = torch.unsqueeze(mask, dim=0).float().to(device)
 
-        model_in = torch.unsqueeze(mri[0], dim=1) * mask[0]
-        model_out = model(model_in) * mask[0]
+        model_out = model(mri[0], mask[0])
 
-        model_in = model_in.cpu()
+        model_in = mri[0].cpu()
         model_out = model_out.cpu()
 
         raw_attention = model.attention.last
@@ -66,7 +65,7 @@ if __name__ == '__main__':
         fig, axes = plt.subplots(5, 6, figsize=(8, 8))
         axes = axes.flatten()
         for i in range(len(tps)):
-            axes[i].imshow(model_in[tps[i], 0, 0], cmap='gray')
+            axes[i].imshow(model_in[tps[i], 0], cmap='gray')
             axes[i].axis('off')
             axes[i].set_title('t={}'.format(tps[i]), fontsize=10, pad=2)
         plt.tight_layout()

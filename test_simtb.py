@@ -35,7 +35,7 @@ if __name__ == '__main__':
         model = model.to(device)
         model.eval()
 
-        testset = NiiDataset('./data/simtb_data', train=False, print_params=False)
+        testset = NiiDataset('./data/simtb_data', train=False, print_params=False, normalization='voxelwise')
         testloader = torch.utils.data.DataLoader(
             testset,
             batch_size=1,
@@ -56,11 +56,10 @@ if __name__ == '__main__':
             mask = mask.bool().to(device)
 
             for n in range(mri.shape[0]):
-                model_in = torch.unsqueeze(mri[n], dim=1) * mask[n]
-                model_out = model(model_in) * mask[n]
+                model_out = model(mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
+                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]

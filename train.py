@@ -53,11 +53,11 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    trainset = NiiDataset('./data/simtb_data', train=True, print_params=False)
-    testset = NiiDataset('./data/simtb_data', train=False, print_params=False)
+    trainset = NiiDataset('./data/simtb_data', train=True, print_params=False, normalization='voxelwise')
+    testset = NiiDataset('./data/simtb_data', train=False, print_params=False, normalization='voxelwise')
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True, num_workers=1)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=True, num_workers=1)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=True)
 
     model = Model(k_maps=20)
     model = model.to(device)
@@ -83,11 +83,10 @@ if __name__ == '__main__':
             for n in range(mri.shape[0]):
                 optimizer.zero_grad()
 
-                model_in = torch.unsqueeze(mri[n], dim=1) * mask[n]
-                model_out = model(model_in) * mask[n]
+                model_out = model(mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
+                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]
@@ -113,11 +112,10 @@ if __name__ == '__main__':
             mask = mask.bool().to(device)
 
             for n in range(mri.shape[0]):
-                model_in = torch.unsqueeze(mri[n], dim=1) * mask[n]
-                model_out = model(model_in) * mask[n]
+                model_out = model(mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
+                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]

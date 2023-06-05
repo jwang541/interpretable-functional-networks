@@ -36,14 +36,12 @@ if __name__ == '__main__':
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset(args.dataset, train=False, print_params=False)
+        testset = NiiDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
         mri, mask = testset.__getitem__(args.subject)
         mri = torch.unsqueeze(mri, dim=0).float().to(device)
         mask = torch.unsqueeze(mask, dim=0).float().to(device)
 
-        model_in = torch.unsqueeze(mri[0], dim=1) * mask[0]
-        model_out = model(model_in) * mask[0]
-
+        model_out = model(mri[0], mask[0])
         model_out = model_out.cpu()
 
         # visualize learned FNs of a single subject
