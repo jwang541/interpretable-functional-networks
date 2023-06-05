@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 
 class NiiDataset(Dataset):
-    def __init__(self, dir, train=True, eps=1e-8, print_params=False):
+    def __init__(self, dir, train=True, eps=1e-8, print_params=False, normalization='global'):
         self.dir = dir
         self.data_dir = os.path.join(self.dir, 'data')
 
@@ -31,7 +31,9 @@ class NiiDataset(Dataset):
         self.n_components = self.params['sP'][0][0][1][0][0]
         self.fmri_size = self.params['sP'][0][0][2][0][0]
         self.n_time_points = self.params['sP'][0][0][3][0][0]
+        
         self.eps = eps
+        self.normalization = normalization
 
         if print_params:
             print('# subjects:', len(self.filenames))
@@ -39,6 +41,9 @@ class NiiDataset(Dataset):
             print('fmri size:', self.fmri_size)
             print('# time points:', self.n_time_points)
             print('point shape:', list(self.__getitem__(0)[0].shape))
+            print('normalization: ', self.normalization)
+
+        
 
     def __len__(self):
         return len(self.filenames)
@@ -51,13 +56,18 @@ class NiiDataset(Dataset):
         torch_dat = torch.from_numpy(nifti_dat)
         X = torch.permute(torch_dat, (3, 2, 1, 0))
 
-        # voxelwise normalization
-        std, mu = torch.std_mean(X, dim=0) 
-        
-        # timewise normalization
+        if self.normalization == 'global':
+            std, mu = torch.std_mean(X)
+            X = (X - mu) / std * self.mask
+            return X, self.mask
+        elif self.normalization == 'voxelwise':
+            std, mu = torch.std_mean(X, dim=0) 
+            X = (X - mu) / std * self.mask
+            return X, self.mask
+        elif self.normalization == 'temporal':
+            std, mu = torch.std_mean(X, dim=(1, 2, 3))
+            X = (X - mu[:, None, None, None]) / std[:, None, None, None] * self.mask
+            return X, self.mask
+        else:
+            raise Exception('unknown normalization type')
 
-        # global normalization  
-        # std, mu = torch.std_mean(X)
-
-        X = (X - mu) / std * self.mask
-        return X, self.mask
