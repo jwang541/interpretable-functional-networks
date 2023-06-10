@@ -4,7 +4,7 @@ import scipy
 import scipy.stats
 import torch
 
-from datasets import NiiDataset
+from datasets import SimtbDataset
 from models import Model
 from utils import *
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         model = model.to(device)
         model.eval()
 
-        testset = NiiDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
+        testset = SimtbDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
         testloader = torch.utils.data.DataLoader(
             testset,
             batch_size=1,

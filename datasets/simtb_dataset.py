@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 
 
 
-class NiiDataset(Dataset):
+class SimtbDataset(Dataset):
     def __init__(self, dir, train=True, eps=1e-8, print_params=False, normalization='global'):
         self.dir = dir
         self.data_dir = os.path.join(self.dir, 'data')

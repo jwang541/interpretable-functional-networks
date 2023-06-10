@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 import torch
 
-from datasets import NiiDataset
+from datasets import SimtbDataset
 from utils import *
 from models import Model
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
+        testset = SimtbDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
         mri, mask = testset.__getitem__(args.subject)
         mri = mri.float().to(device)
         mask = mask.float().to(device)

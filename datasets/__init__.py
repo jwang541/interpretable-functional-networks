@@ -1,1 +1,1 @@
-from .nii_dataset import NiiDataset
+from .simtb_dataset import SimtbDataset

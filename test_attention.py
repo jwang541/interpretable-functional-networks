@@ -7,7 +7,7 @@ import pandas as pd
 import random
 import matplotlib.pyplot as plt
 
-from datasets import NiiDataset
+from datasets import SimtbDataset
 from utils import *
 from models import Model
 
@@ -42,15 +42,15 @@ if __name__ == '__main__':
         model = model.to(device)
         model.eval()
 
-        # testset = NiiDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
-        testset = NiiDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
+        # testset = SimtbDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
+        testset = SimtbDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
         
         mri, mask = testset.__getitem__(args.subject)
         mri =  mri.float().to(device)
         mask = mask.bool().to(device)
 
         model_in = mri * mask
-        model_in, rician_indices = add_rician_noise(model_in, mask, 0.25, std=1.0)
+        model_in, rician_indices = add_rician_noise(model_in, mask, 0.25, std=0.25)
         model_in, affine_indices = add_affine2d_noise(model_in, mask, 0.25, max_trans=0.05, max_angle=5.0)
 
         model_out = model(model_in, mask)

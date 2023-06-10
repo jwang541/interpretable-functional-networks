@@ -4,7 +4,7 @@ import argparse
 import torch
 import torch.nn as nn
 
-from datasets import NiiDataset
+from datasets import SimtbDataset
 from models import Model
 from utils import *
 
@@ -54,11 +54,11 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print('- Trainset parameters -')
-    trainset = NiiDataset('./data/simtb_data', train=True, print_params=True, normalization='voxelwise')
+    trainset = SimtbDataset('./data/simtb_data', train=True, print_params=True, normalization='voxelwise')
     print()
 
     print('- Testset parameters -')
-    testset = NiiDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
+    testset = SimtbDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
     print()
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
 
                 model_in = mri[n] * mask[n]
-                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=1.0)
+                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
                 model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
                 # print('Rician:', rician_indices)
                 # print('Affine:', affine_indices)
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
             for n in range(mri.shape[0]):
                 model_in = mri[n] * mask[n]
-                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=1.0)
+                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
                 model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
                 # print('Rician:', rician_indices)
                 # print('Affine:', affine_indices)
