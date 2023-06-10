@@ -1,5 +1,6 @@
 import os
 import argparse
+import random
 
 
 import torch
@@ -7,7 +8,7 @@ import torch.nn as nn
 
 from datasets import NiiDataset
 from models import Model
-from utils import lstsq_loss, hoyer_loss, clustering_loss
+from utils import *
 
 
 
@@ -41,6 +42,7 @@ if __name__ == '__main__':
 
     # parse and print command line arguments
     args = parser.parse_args()
+    print('- Training parameters -')
     print('train mode:', 'finetune' if args.finetune else 'pretrain')
     print('checkpoint path:', args.checkpoint)
     print('epochs:', args.epochs)
@@ -53,8 +55,13 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    trainset = NiiDataset('./data/simtb_data', train=True, print_params=False, normalization='voxelwise')
-    testset = NiiDataset('./data/simtb_data', train=False, print_params=False, normalization='voxelwise')
+    print('- Trainset parameters -')
+    trainset = NiiDataset('./data/simtb_data', train=True, print_params=True, normalization='voxelwise')
+    print()
+
+    print('- Testset parameters -')
+    testset = NiiDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
+    print()
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
     testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=True)
@@ -83,7 +90,14 @@ if __name__ == '__main__':
             for n in range(mri.shape[0]):
                 optimizer.zero_grad()
 
-                model_out = model(mri[n], mask[n])
+                model_in = mri[n] * mask[n]
+                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=1.0)
+                model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
+                # print('Rician:', rician_indices)
+                # print('Affine:', affine_indices)
+
+                # Compute FNs with added noise
+                model_out = model(model_in, mask[n])
 
                 mask_flat = torch.flatten(mask[n])
                 in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
@@ -92,6 +106,7 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
+                # Compute loss function without added noise; encourages model to be robust to noise
                 if args.finetune:
                     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
                 else:
@@ -112,7 +127,14 @@ if __name__ == '__main__':
             mask = mask.bool().to(device)
 
             for n in range(mri.shape[0]):
-                model_out = model(mri[n], mask[n])
+                model_in = mri[n] * mask[n]
+                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=1.0)
+                model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
+                # print('Rician:', rician_indices)
+                # print('Affine:', affine_indices)
+
+                # Compute FNs with added noise
+                model_out = model(model_in, mask[n])
 
                 mask_flat = torch.flatten(mask[n])
                 in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
@@ -121,6 +143,7 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
+                # Compute loss function without added noise; encourages model to be robust to noise
                 if args.finetune:
                     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
                 else:
