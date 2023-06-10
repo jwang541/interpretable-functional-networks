@@ -40,34 +40,32 @@ class NiiDataset(Dataset):
             print('# components:', self.n_components)
             print('fmri size:', self.fmri_size)
             print('# time points:', self.n_time_points)
-            print('point shape:', list(self.__getitem__(0)[0].shape))
             print('normalization: ', self.normalization)
-
-        
 
     def __len__(self):
         return len(self.filenames)
     
     def __getitem__(self, idx):
-        data_file = os.path.join(self.data_dir, self.filenames[idx])
-        nifti_img = nib.load(data_file)
-        nifti_dat = nifti_img.get_fdata()
+        with torch.no_grad():
+            data_file = os.path.join(self.data_dir, self.filenames[idx])
+            nifti_img = nib.load(data_file)
+            nifti_dat = nifti_img.get_fdata()
 
-        torch_dat = torch.from_numpy(nifti_dat)
-        X = torch.permute(torch_dat, (3, 2, 1, 0))
+            torch_dat = torch.from_numpy(nifti_dat)
+            x = torch.permute(torch_dat, (3, 2, 1, 0))
+            mask = self.mask
 
-        if self.normalization == 'global':
-            std, mu = torch.std_mean(X)
-            X = (X - mu) / std * self.mask
-            return X, self.mask
-        elif self.normalization == 'voxelwise':
-            std, mu = torch.std_mean(X, dim=0) 
-            X = (X - mu) / std * self.mask
-            return X, self.mask
-        elif self.normalization == 'temporal':
-            std, mu = torch.std_mean(X, dim=(1, 2, 3))
-            X = (X - mu[:, None, None, None]) / std[:, None, None, None] * self.mask
-            return X, self.mask
-        else:
-            raise Exception('unknown normalization type')
+            if self.normalization == 'global':
+                std, mu = torch.std_mean(x)
+                x = (x - mu) / std * mask
+            elif self.normalization == 'voxelwise':
+                std, mu = torch.std_mean(x, dim=0) 
+                x = (x - mu) / std * mask
+            elif self.normalization == 'temporal':
+                std, mu = torch.std_mean(x, dim=(1, 2, 3))
+                x = (x - mu[:, None, None, None]) / std[:, None, None, None] * mask
+            else:
+                raise Exception('unknown normalization type')
+            
+            return x, mask
 
