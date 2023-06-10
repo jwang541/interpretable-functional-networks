@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 
 from datasets import NiiDataset
+from utils import *
 from models import Model
 
 
@@ -36,12 +37,14 @@ if __name__ == '__main__':
         model.eval()
 
         # visualize fmri datasets
-        testset = NiiDataset(args.dataset, train=False, print_params=False, normalization='voxelwise')
+        testset = NiiDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
         mri, mask = testset.__getitem__(args.subject)
-        mri = torch.unsqueeze(mri, dim=0).float().to(device)
-        mask = torch.unsqueeze(mask, dim=0).float().to(device)
+        mri = mri.float().to(device)
+        mask = mask.float().to(device)
 
-        model_out = model(mri[0], mask[0])
+        model_in = mri * mask
+
+        model_out = model(model_in, mask)
         model_out = model_out.cpu()
 
         # visualize learned FNs of a single subject
