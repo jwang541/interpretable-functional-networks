@@ -6,7 +6,7 @@ import torch
 
 from datasets import NiiDataset
 from models import Model
-from utils import lstsq_loss
+from utils import *
 
 
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         model = model.to(device)
         model.eval()
 
-        testset = NiiDataset('./data/simtb_data', train=False, print_params=False, normalization='voxelwise')
+        testset = NiiDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
         testloader = torch.utils.data.DataLoader(
             testset,
             batch_size=1,
