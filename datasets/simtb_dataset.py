@@ -36,6 +36,8 @@ class SimtbDataset(Dataset):
         self.normalization = normalization
 
         if print_params:
+            print('path:', self.dir)
+            print('mode:', ('train' if train else 'test'))
             print('# subjects:', len(self.filenames))
             print('# components:', self.n_components)
             print('fmri size:', self.fmri_size)

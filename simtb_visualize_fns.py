@@ -1,20 +1,19 @@
-import os
-from pathlib import Path
 import argparse
-from datetime import datetime
+import math
 
+import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 import nibabel as nib
 
-from models import Model
+from datasets import SimtbDataset
 from utils import *
+from models import Model
 
 
 
-# Estimate functional networks, save the results to .nii files in ./out
+# Compute and visualize functional networks of simtb fMRI data (.nii)
 
-# Usage: deploy.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK]
+# Usage: python simtb_visualize_fns.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK]
 
 # Required:
 #   -k            : number of functional networks (must match model weights)
@@ -25,7 +24,7 @@ from utils import *
 #   -m, --mask    : .nii fMRI mask file, if not provided then no mask will be used
 
 if __name__ == '__main__':
-    
+
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', type=int, help='number of functional networks (must match model weights)', required=True)
@@ -44,21 +43,15 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # make output directory if it doesn't already exist
-    if not os.path.exists('./out'):
-        os.makedirs('./out')
-
-    ###################################################################################################################
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     ###################################################################################################################
 
     with torch.no_grad():
         # load model weights
         model = Model(k_maps=args.k)
-        model = model.to(device)
         model.load_state_dict(torch.load(args.weights))
+        model = model.to(device)
         model.eval()
 
     ###################################################################################################################
@@ -95,14 +88,13 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # save each functional network to a .nii file
-    timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    for i in range(fns.shape[0]):
-        fn = fns[i]
-        fn = torch.permute(fn, (2, 1, 0))
-        fn = fn.cpu()
-        fn = fn.numpy()
-        fn_nii = nib.Nifti1Image(fn, affine=None)
-        nib.save(fn_nii, './out/{}_fn{}'.format(Path(args.data).stem, i))
-
-   
+    # visualize learned functional networks
+    fns = fns.cpu()
+    fig, axes = plt.subplots(math.ceil(math.sqrt(args.k)), math.ceil(math.sqrt(args.k)), figsize=(10, 8))
+    axes = axes.flatten()
+    for i in range(args.k):
+        axes[i].imshow(fns[i, 0], cmap='gray')
+        axes[i].axis('off')
+        axes[i].set_title('FN {}'.format(i), fontsize=10, pad=2)
+    plt.tight_layout()
+    plt.show()

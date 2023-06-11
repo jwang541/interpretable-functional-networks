@@ -1,10 +1,9 @@
 import os
-from pathlib import Path
 import argparse
-from datetime import datetime
+import scipy
 
+import numpy as np
 import torch
-import torch.nn as nn
 import nibabel as nib
 
 from models import Model
@@ -14,12 +13,13 @@ from utils import *
 
 # Estimate functional networks, save the results to .nii files in ./out
 
-# Usage: deploy.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK]
+# Usage: deploy.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK] -s SOURCE
 
 # Required:
 #   -k            : number of functional networks (must match model weights)
 #   -w, --weights : model weights file
 #   -d, --data    : .nii fMRI data file
+#   -s, --source : simtb source maps (.mat file)
 
 # Optional:
 #   -m, --mask    : .nii fMRI mask file, if not provided then no mask will be used
@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--weights', type=str, help='path to weights file', required=True)
     parser.add_argument('-d', '--data', type=str, help='path to .nii fMRI data file', required=True)
     parser.add_argument('-m', '--mask', type=str, help='path to .nii fMRI mask file', required=False)
+    parser.add_argument('-s', '--source', type=str, help='path to .mat simtb source file', required=True)
 
     # print arguments
     args = parser.parse_args()
@@ -40,6 +41,7 @@ if __name__ == '__main__':
     print('Weights file:', args.weights)
     print('Data file:', args.data)
     print('Mask file:', args.mask if args.mask is not None else 'N/A')
+    print('Source file:', args.source)
     print()
 
     ###################################################################################################################
@@ -95,14 +97,41 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # save each functional network to a .nii file
-    timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    for i in range(fns.shape[0]):
-        fn = fns[i]
-        fn = torch.permute(fn, (2, 1, 0))
-        fn = fn.cpu()
-        fn = fn.numpy()
-        fn_nii = nib.Nifti1Image(fn, affine=None)
-        nib.save(fn_nii, './out/{}_fn{}'.format(Path(args.data).stem, i))
+    # load simtb source maps 
+    data = scipy.io.loadmat(args.source)
+    source_maps = data['SM']
+    time_courses = data['TC']
+
+    ###################################################################################################################
+
+    fns = torch.reshape(fns, (fns.shape[0], -1))
+    fns = fns.cpu()
+    fns = fns.numpy()
+
+    mask = torch.reshape(mask, (-1,))
+    mask = mask.cpu()
+    mask = mask.numpy()
+
+    fns_masked = fns[:, mask]
+    sms_masked = source_maps[:, mask]
+
+    # calculate pearson r between each functional network and source map
+    correlations = np.zeros(shape=(args.k, args.k))
+    for i in range(args.k):
+        for j in range(args.k):
+            r, _ = scipy.stats.pearsonr(sms_masked[i], fns_masked[j])
+            correlations[i, j] = r
+
+    # perform linear sum assignment over correlations to match FNs to SMs
+    row_ind, col_ind = scipy.optimize.linear_sum_assignment(-1.0 * correlations)
+
+    # print correlations
+    r_sum = 0
+    print('- Ground truth spatial correlation -')
+    for i in range(args.k):
+        correlation, _ = scipy.stats.pearsonr(sms_masked[i], fns_masked[col_ind[i]])
+        print('SM {}\tFN {}\t{:.5f}'.format(i, col_ind[i], correlation))
+        r_sum += correlation
+    print('Average\t\t{:.5f}'.format(r_sum / args.k))
 
    

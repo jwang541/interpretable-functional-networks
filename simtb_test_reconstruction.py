@@ -1,18 +1,14 @@
-import os
-from pathlib import Path
 import argparse
-from datetime import datetime
-
-import torch
-import torch.nn as nn
 import nibabel as nib
+import scipy.stats
+import torch
 
 from models import Model
 from utils import *
 
 
 
-# Estimate functional networks, save the results to .nii files in ./out
+# Calculate lstsq loss of model on simtb data
 
 # Usage: deploy.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK]
 
@@ -25,7 +21,7 @@ from utils import *
 #   -m, --mask    : .nii fMRI mask file, if not provided then no mask will be used
 
 if __name__ == '__main__':
-    
+
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', type=int, help='number of functional networks (must match model weights)', required=True)
@@ -41,12 +37,6 @@ if __name__ == '__main__':
     print('Data file:', args.data)
     print('Mask file:', args.mask if args.mask is not None else 'N/A')
     print()
-
-    ###################################################################################################################
-
-    # make output directory if it doesn't already exist
-    if not os.path.exists('./out'):
-        os.makedirs('./out')
 
     ###################################################################################################################
 
@@ -88,21 +78,22 @@ if __name__ == '__main__':
             mask = torch.greater(mask, 0.01)
 
     ###################################################################################################################
-    
+
     with torch.no_grad():
         # estimate functional networks
         fns = model(data * mask, mask) * mask
 
     ###################################################################################################################
 
-    # save each functional network to a .nii file
-    timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    for i in range(fns.shape[0]):
-        fn = fns[i]
-        fn = torch.permute(fn, (2, 1, 0))
-        fn = fn.cpu()
-        fn = fn.numpy()
-        fn_nii = nib.Nifti1Image(fn, affine=None)
-        nib.save(fn_nii, './out/{}_fn{}'.format(Path(args.data).stem, i))
+    # flatten mask, model in, model out
+    mask = torch.reshape(mask, (-1,))
+    data = torch.reshape(data, (data.shape[0], -1))
+    fns = torch.reshape(fns, (fns.shape[0], -1))
 
-   
+    data_masked = data[:, mask]
+    fns_masked = fns[:, mask]
+
+    # evaluate lstsq loss
+    print('- Data reconstruction loss -')
+    print(lstsq_loss(fns_masked.t(), data_masked.t()).item())
+    print()

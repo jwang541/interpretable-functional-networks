@@ -10,11 +10,12 @@ from utils import *
 
 
 
-# Usage: train.py [-h] (-p | -f) [-c CHECKPOINT] [-e EPOCHS] [-l LR] [-t TRADE_OFF]
+# Usage: simtb_train.py [-h] (-p | -f) -d DATASET [-c CHECKPOINT] [-e EPOCHS] [-l LR] [-t TRADE_OFF]
 
 # Required:
 #   -p, --pretrain : pretraining (lstsq) loss function
 #   -f, --finetune : finetuning (clustering) loss function
+#   -d, --dataset  : path to dataset (must be compatible with SimtbDataset class)
 
 # Optional:
 #   -c, --checkpoint CHECKPOINT : path to a checkpoint weights file (.pt)
@@ -31,6 +32,9 @@ if __name__ == '__main__':
     train_mode_args = parser.add_mutually_exclusive_group(required=True)
     train_mode_args.add_argument('-p', '--pretrain', action='store_true', help='pretrain the model')
     train_mode_args.add_argument('-f', '--finetune', action='store_true', help='finetune the model')
+
+    # dataset argument
+    parser.add_argument('-d', '--dataset', type=str, required=True, help='path to dataset (must be compatible with SimtbDataset class)')
 
     # hyperparameter arguments
     parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
@@ -54,11 +58,11 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print('- Trainset parameters -')
-    trainset = SimtbDataset('./data/simtb_data', train=True, print_params=True, normalization='voxelwise')
+    trainset = SimtbDataset(args.dataset, train=True, print_params=True, normalization='voxelwise')
     print()
 
     print('- Testset parameters -')
-    testset = SimtbDataset('./data/simtb_data', train=False, print_params=True, normalization='voxelwise')
+    testset = SimtbDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
     print()
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
@@ -91,8 +95,6 @@ if __name__ == '__main__':
                 model_in = mri[n] * mask[n]
                 model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
                 model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
-                # print('Rician:', rician_indices)
-                # print('Affine:', affine_indices)
 
                 # Compute FNs with added noise
                 model_out = model(model_in, mask[n])
@@ -128,8 +130,6 @@ if __name__ == '__main__':
                 model_in = mri[n] * mask[n]
                 model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
                 model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
-                # print('Rician:', rician_indices)
-                # print('Affine:', affine_indices)
 
                 # Compute FNs with added noise
                 model_out = model(model_in, mask[n])
