@@ -27,7 +27,7 @@ class HcpDataset(Dataset):
             print('normalization: ', self.normalization)
 
     def __len__(self):
-        return len(self.files)
+        return len(self.data_files)
     
     def __getitem__(self, i):
         with torch.no_grad():
