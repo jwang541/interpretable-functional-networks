@@ -66,6 +66,8 @@ class SimtbDataset(Dataset):
             elif self.normalization == 'temporal':
                 std, mu = torch.std_mean(x, dim=(1, 2, 3))
                 x = (x - mu[:, None, None, None]) / std[:, None, None, None] * mask
+            elif self.normalization == 'none':
+                x = x * mask
             else:
                 raise Exception('unknown normalization type')
             
