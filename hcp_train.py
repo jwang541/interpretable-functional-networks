@@ -14,7 +14,34 @@ from utils import *
 
 if __name__ == '__main__':
 
-    # extract cmd args
+    # parse arguments
+    parser = argparse.ArgumentParser()
+
+    # train mode arguments
+    train_mode_args = parser.add_mutually_exclusive_group(required=True)
+    train_mode_args.add_argument('-p', '--pretrain', action='store_true', help='pretrain the model')
+    train_mode_args.add_argument('-f', '--finetune', action='store_true', help='finetune the model')
+
+    # # data arguments
+    # parser.add_argument('-d', '--dataset', type=str, required=True, help='path to dataset (must be compatible with SimtbDataset class)')
+    # parser.add_argument('-k', type=int, help='number of functional networks (must match checkpoint weights)', required=True)
+
+    # # hyperparameter arguments
+    # parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
+    # parser.add_argument('-e', '--epochs', type=int, default=300, help='number of epochs (default: 300)')
+    # parser.add_argument('-l', '--lr', type=float, default=0.001, help='learning rate (default: 0.0001)')
+    # parser.add_argument('-t', '--trade_off', type=float, default=10, help='hoyer trade off parameter (default: 10)')
+
+    # # parse and print command line arguments
+    # args = parser.parse_args()
+    # print('- Training parameters -')
+    # print('train mode:', 'finetune' if args.finetune else 'pretrain')
+    # print('checkpoint path:', args.checkpoint)
+    # print('epochs:', args.epochs)
+    # print('learning rate:', args.lr)
+    # if args.finetune:
+    #     print('sparsity trade-off:', args.trade_off)
+    # print()
 
     ###################################################################################################################
 
@@ -35,6 +62,8 @@ if __name__ == '__main__':
 
     model = Model(k_maps=17)
     model = model.to(device)
+    # if args.checkpoint is not None:
+    #     model.load_state_dict(torch.load(args.checkpoint))
 
     ###################################################################################################################
 
@@ -51,63 +80,45 @@ if __name__ == '__main__':
         mri, mask = data
         print(mri.shape, mask.shape)
 
-    # p = 0.01
+    # for epoch in range(args.epochs):
+    for epoch in range(100):
+        if epoch % 10 == 0:
+            torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
 
-    # # for epoch in range(args.epochs):
-    # for epoch in range(10):
-    #     # if epoch % 10 == 0:
-    #         # torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
-    #     torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
+        model.train()
+        train_loss = 0
+        for i, data in enumerate(trainloader):
+            mri, mask = data
+            mri = mri.float().to(device)
+            mask = mask.bool().to(device)
 
-    #     model.train()
-    #     train_loss = 0
-    #     for i, data in enumerate(trainloader):
-    #         mri, mask = data
-    #         mri = mri.float().to(device)
-    #         mask = mask.bool().to(device)
+            for n in range(mri.shape[0]):
+                optimizer.zero_grad()
 
-    #         for n in range(mri.shape[0]):
-    #             optimizer.zero_grad()
+                model_out = model(mri[n], mask[n])
 
-    #             sample = []
-    #             for t in range(mri[n].shape[0]):
-    #                 if random.random() < p:
-    #                     sample.append(mri[n, t])
+                mask_flat = torch.flatten(mask[n])
+                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
+                out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
-    #             # model_in = torch.stack(sample)
-    #             model_in = mri[n, 0]
-    #             model_in = model_in.unsqueeze(0)
-    #             print('model in', model_in.shape)
+                in_masked = in_flat[:, mask_flat]
+                out_masked = out_flat[:, mask_flat]
 
-    #             # model_in = mri[n] * mask[n]
-    #             # model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
-    #             # model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
+                # Compute loss function without added noise; encourages model to be robust to noise
+                print(lstsq_loss(out_masked.t(), in_masked.t()), hoyer_loss(out_masked))
 
-    #             # Compute FNs with added noise
-    #             model_out = model(model_in, mask[n])
+                loss = lstsq_loss(out_masked.t(), in_masked.t()) + 10.0 * hoyer_loss(out_masked)
 
-    #             mask_flat = torch.flatten(mask[n])
-    #             in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
-    #             out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
-
-    #             in_masked = in_flat[:, mask_flat]
-    #             out_masked = out_flat[:, mask_flat]
-
-    #             # Compute loss function without added noise; encourages model to be robust to noise
-    #             print(lstsq_loss(out_masked.t(), in_masked.t()), hoyer_loss(out_masked))
-
-    #             loss = lstsq_loss(out_masked.t(), in_masked.t()) + 10.0 * hoyer_loss(out_masked)
-
-    #             # if args.finetune:
-    #             #     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
-    #             # else:
-    #             #     loss = clustering_loss(out_masked, in_masked)
+                # if args.finetune:
+                #     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
+                # else:
+                #     loss = clustering_loss(out_masked, in_masked)
                 
-    #             loss.backward()
+                loss.backward()
                 
-    #             nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-    #             train_loss += loss.item()
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                train_loss += loss.item()
 
-    #             optimizer.step()
+                optimizer.step()
 
-    #     print(epoch, train_loss)
+        print(epoch, train_loss)
