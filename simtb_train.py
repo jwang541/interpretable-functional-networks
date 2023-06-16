@@ -92,12 +92,7 @@ if __name__ == '__main__':
             for n in range(mri.shape[0]):
                 optimizer.zero_grad()
 
-                model_in = mri[n] * mask[n]
-                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
-                model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
-
-                # Compute FNs with added noise
-                model_out = model(model_in, mask[n])
+                model_out = model(mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
                 in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
@@ -106,7 +101,6 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                # Compute loss function without added noise; encourages model to be robust to noise
                 if args.finetune:
                     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
                 else:
@@ -127,12 +121,7 @@ if __name__ == '__main__':
             mask = mask.bool().to(device)
 
             for n in range(mri.shape[0]):
-                model_in = mri[n] * mask[n]
-                model_in, rician_indices = add_rician_noise(model_in, mask[n], 0.25, std=0.25)
-                model_in, affine_indices = add_affine2d_noise(model_in, mask[n], 0.25, max_trans=0.05, max_angle=5.0)
-
-                # Compute FNs with added noise
-                model_out = model(model_in, mask[n])
+                model_out = model(mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
                 in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
@@ -141,7 +130,6 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                # Compute loss function without added noise; encourages model to be robust to noise
                 if args.finetune:
                     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
                 else:
