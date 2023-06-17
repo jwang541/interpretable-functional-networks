@@ -33,10 +33,8 @@ def hoyer_loss(x, eps=1e-8):
 def clustering_loss(x, y, eps=1e-8):
     spatial_mass = torch.sum(x, dim=1)
     spatial_density = torch.einsum('ks, k -> ks', x, 1.0 / (spatial_mass + eps))
-
     tcs = torch.einsum('ts, ks -> tk', y, spatial_density)
     y_recon = torch.einsum('tk, ks -> ts', tcs, x)
-
     return torch.sum(torch.square(y_recon - y))
 
 

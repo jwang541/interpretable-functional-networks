@@ -3,6 +3,7 @@ import os.path
 
 import nibabel as nib
 import scipy
+import scipy.io as sio
 import torch
 from torch.utils.data import Dataset
 
@@ -27,7 +28,7 @@ class SimtbDataset(Dataset):
             torch.from_numpy(mask_dat), (2, 1, 0)), 0.01)
 
         self.params_file = os.path.join(self.dir, 'params.mat')
-        self.params = scipy.io.loadmat(self.params_file)
+        self.params = sio.loadmat(self.params_file)
         self.n_components = self.params['sP'][0][0][1][0][0]
         self.fmri_size = self.params['sP'][0][0][2][0][0]
         self.n_time_points = self.params['sP'][0][0][3][0][0]
@@ -59,10 +60,10 @@ class SimtbDataset(Dataset):
 
             if self.normalization == 'global':
                 std, mu = torch.std_mean(x)
-                x = (x - mu) / std * mask
+                x = (x - mu) / (std + self.eps) * mask
             elif self.normalization == 'voxelwise':
                 std, mu = torch.std_mean(x, dim=0) 
-                x = (x - mu) / std * mask
+                x = (x - mu) / (std + self.eps) * mask
             elif self.normalization == 'temporal':
                 std, mu = torch.std_mean(x, dim=(1, 2, 3))
                 x = (x - mu[:, None, None, None]) / std[:, None, None, None] * mask

@@ -1,6 +1,7 @@
 import argparse
 import math
 import scipy
+import scipy.io as sio
 import matplotlib.pyplot as plt
 
 
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     ###################################################################################################################
 
     # load simtb data 
-    data = scipy.io.loadmat(args.source)
+    data = sio.loadmat(args.source)
     source_maps = data['SM']
     time_courses = data['TC']
     

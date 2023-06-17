@@ -1,6 +1,7 @@
 import os
 import argparse
 import scipy
+import scipy.io as sio
 
 import numpy as np
 import torch
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     ###################################################################################################################
 
     # load simtb source maps 
-    data = scipy.io.loadmat(args.source)
+    data = sio.loadmat(args.source)
     source_maps = data['SM']
     time_courses = data['TC']
 

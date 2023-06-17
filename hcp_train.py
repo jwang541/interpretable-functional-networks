@@ -8,6 +8,7 @@ from datasets import HcpDataset
 from models import Model
 from utils import *
 
+import resource
 
 
 
@@ -76,13 +77,13 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    for i, data in enumerate(trainloader):
-        mri, mask = data
-        print(mri.shape, mask.shape)
+    # for i, data in enumerate(trainloader):
+    #     mri, mask = data
+    #     print(mri.shape, mask.shape)
 
     # for epoch in range(args.epochs):
-    for epoch in range(100):
-        if epoch % 10 == 0:
+    for epoch in range(10):
+        if epoch % 1 == 0:
             torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
 
         model.train()
@@ -95,19 +96,25 @@ if __name__ == '__main__':
             for n in range(mri.shape[0]):
                 optimizer.zero_grad()
 
-                model_out = model(mri[n], mask[n])
+                model_in = mri[n]
+                model_in = model_in[0:10]
+                model_out = model(model_in, mask[n])
+
+                # print('forward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
+                in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                # Compute loss function without added noise; encourages model to be robust to noise
-                print(lstsq_loss(out_masked.t(), in_masked.t()), hoyer_loss(out_masked))
+                loss = clustering_loss(out_masked, in_masked)
+                # print(clustering_loss(out_masked, in_masked).item())
+                # print(lstsq_loss(out_masked.t(), in_masked.t()).item())
+                # exit()
 
-                loss = lstsq_loss(out_masked.t(), in_masked.t()) + 10.0 * hoyer_loss(out_masked)
+                # loss = lstsq_loss(out_masked.t(), in_masked.t()) + 10.0 * hoyer_loss(out_masked)
 
                 # if args.finetune:
                 #     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
@@ -115,10 +122,15 @@ if __name__ == '__main__':
                 #     loss = clustering_loss(out_masked, in_masked)
                 
                 loss.backward()
-                
+                # print('backward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
+
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 train_loss += loss.item()
 
                 optimizer.step()
+
+                # print('optimizer', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
+                # exit()
+                print(loss.item())
 
         print(epoch, train_loss)

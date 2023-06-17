@@ -44,12 +44,12 @@ class HcpDataset(Dataset):
 
             if self.normalization == 'global':
                 std, mu = torch.std_mean(data[:, mask])
-                data = (data - mu) / std * mask
+                data = (data - mu) / (std + self.eps) * mask
             elif self.normalization == 'voxelwise':
                 std, mu = torch.std_mean(data, dim=0) 
-                data = (data - mu) / std * mask
+                data = (data - mu) / (std + self.eps) * mask
             else:
                 raise Exception('unknown normalization type')
-            
+
             return data, mask
 
