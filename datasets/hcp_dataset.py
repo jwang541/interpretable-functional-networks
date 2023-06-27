@@ -42,6 +42,9 @@ class HcpDataset(Dataset):
             mask = torch.permute(mask, (2, 1, 0))
             mask = mask.bool()
 
+            # TODO: temporary
+            data = data[::20]
+
             if self.normalization == 'global':
                 std, mu = torch.std_mean(data[:, mask])
                 data = (data - mu) / (std + self.eps) * mask
