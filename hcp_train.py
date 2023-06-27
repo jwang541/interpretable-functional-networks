@@ -23,26 +23,26 @@ if __name__ == '__main__':
     train_mode_args.add_argument('-p', '--pretrain', action='store_true', help='pretrain the model')
     train_mode_args.add_argument('-f', '--finetune', action='store_true', help='finetune the model')
 
-    # # data arguments
+    # data arguments
     # parser.add_argument('-d', '--dataset', type=str, required=True, help='path to dataset (must be compatible with SimtbDataset class)')
-    # parser.add_argument('-k', type=int, help='number of functional networks (must match checkpoint weights)', required=True)
+    parser.add_argument('-k', type=int, help='number of functional networks (must match checkpoint weights)', required=True)
 
-    # # hyperparameter arguments
-    # parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
-    # parser.add_argument('-e', '--epochs', type=int, default=300, help='number of epochs (default: 300)')
-    # parser.add_argument('-l', '--lr', type=float, default=0.001, help='learning rate (default: 0.0001)')
-    # parser.add_argument('-t', '--trade_off', type=float, default=10, help='hoyer trade off parameter (default: 10)')
+    # hyperparameter arguments
+    parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
+    parser.add_argument('-e', '--epochs', type=int, default=300, help='number of epochs (default: 300)')
+    parser.add_argument('-l', '--lr', type=float, default=0.001, help='learning rate (default: 0.0001)')
+    parser.add_argument('-t', '--trade_off', type=float, default=10, help='hoyer trade off parameter (default: 10)')
 
-    # # parse and print command line arguments
-    # args = parser.parse_args()
-    # print('- Training parameters -')
-    # print('train mode:', 'finetune' if args.finetune else 'pretrain')
-    # print('checkpoint path:', args.checkpoint)
-    # print('epochs:', args.epochs)
-    # print('learning rate:', args.lr)
-    # if args.finetune:
-    #     print('sparsity trade-off:', args.trade_off)
-    # print()
+    # parse and print command line arguments
+    args = parser.parse_args()
+    print('- Training parameters -')
+    print('train mode:', 'finetune' if args.finetune else 'pretrain')
+    print('checkpoint path:', args.checkpoint)
+    print('epochs:', args.epochs)
+    print('learning rate:', args.lr)
+    if args.finetune:
+        print('sparsity trade-off:', args.trade_off)
+    print()
 
     ###################################################################################################################
 
@@ -61,10 +61,10 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    model = Model(k_maps=17)
+    model = Model(k_maps=args.k)
     model = model.to(device)
-    # if args.checkpoint is not None:
-    #     model.load_state_dict(torch.load(args.checkpoint))
+    if args.checkpoint is not None:
+        model.load_state_dict(torch.load(args.checkpoint))
 
     ###################################################################################################################
 
@@ -77,12 +77,7 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # for i, data in enumerate(trainloader):
-    #     mri, mask = data
-    #     print(mri.shape, mask.shape)
-
-    # for epoch in range(args.epochs):
-    for epoch in range(10):
+    for epoch in range(args.epochs):
         if epoch % 1 == 0:
             torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
 
@@ -97,9 +92,8 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
 
                 model_in = mri[n]
-                model_in = model_in[0:10]
+                # model_in = model_in[0:10]
                 model_out = model(model_in, mask[n])
-
                 # print('forward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
 
                 mask_flat = torch.flatten(mask[n])
@@ -109,17 +103,10 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                loss = clustering_loss(out_masked, in_masked)
-                # print(clustering_loss(out_masked, in_masked).item())
-                # print(lstsq_loss(out_masked.t(), in_masked.t()).item())
-                # exit()
-
-                # loss = lstsq_loss(out_masked.t(), in_masked.t()) + 10.0 * hoyer_loss(out_masked)
-
-                # if args.finetune:
-                #     loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
-                # else:
-                #     loss = clustering_loss(out_masked, in_masked)
+                if args.finetune:
+                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
+                else:
+                    loss = clustering_loss(out_masked, in_masked)
                 
                 loss.backward()
                 # print('backward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
@@ -131,6 +118,5 @@ if __name__ == '__main__':
 
                 # print('optimizer', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
                 # exit()
-                print(loss.item())
 
         print(epoch, train_loss)

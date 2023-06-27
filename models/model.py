@@ -6,8 +6,8 @@ from .parts import UNet, SqueezeExcitation3D, SCSqueezeExcitation3D
 
 
 
-# # Takes fMRI data of dimension (T, D, H, W) and an optional mask of dimension (D, H, W),
-# # and produces a feature map of dimension (K, D, H, W).
+# Takes fMRI data of dimension (T, D, H, W) and an optional mask of dimension (D, H, W),
+# and produces a feature map of dimension (K, D, H, W).
 class Model(nn.Module):
     def __init__(self, k_maps, eps=1e-8, debug=False):
         super().__init__()
