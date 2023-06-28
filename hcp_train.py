@@ -120,3 +120,5 @@ if __name__ == '__main__':
                 # exit()
 
         print(epoch, train_loss)
+
+    torch.save(model.state_dict(), './out/e{}.pt'.format(args.epochs))

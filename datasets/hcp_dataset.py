@@ -31,19 +31,22 @@ class HcpDataset(Dataset):
     
     def __getitem__(self, i):
         with torch.no_grad():
-            data = nib.load(self.data_files[i])
-            data = data.get_fdata(dtype=np.float32)
+            data_proxy = nib.load(self.data_files[i])
+            # data = data_proxy.dataobj[..., 0:20]
+            # data = data.astype(np.float32)
+            # data = torch.from_numpy(data)
+            # data = torch.permute(data, (3, 2, 1, 0))
+            
+            data = data_proxy.get_fdata(dtype=np.float32)
             data = torch.from_numpy(data)
             data = torch.permute(data, (3, 2, 1, 0))
+            data = data[::20]
 
-            mask = nib.load(self.mask_file)
-            mask = mask.get_fdata(dtype=np.float32)
+            mask_proxy = nib.load(self.mask_file)
+            mask = mask_proxy.get_fdata(dtype=np.float32)
             mask = torch.from_numpy(mask)
             mask = torch.permute(mask, (2, 1, 0))
             mask = mask.bool()
-
-            # TODO: temporary
-            data = data[::20]
 
             if self.normalization == 'global':
                 std, mu = torch.std_mean(data[:, mask])
