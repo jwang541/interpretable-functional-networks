@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 import argparse
 from datetime import datetime
 
@@ -51,6 +50,7 @@ if __name__ == '__main__':
     ###################################################################################################################
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
 
     ###################################################################################################################
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
         # voxelwise normalization
         std, mu = torch.std_mean(data, dim=0)
-        data = (data - mu) / std
+        data = (data - mu) / (std + 1e-8)
         data = data.float()
 
         # load and preprocess fMRI mask
@@ -103,6 +103,6 @@ if __name__ == '__main__':
         fn = fn.cpu()
         fn = fn.numpy()
         fn_nii = nib.Nifti1Image(fn, affine=None)
-        nib.save(fn_nii, './out/{}_fn{}'.format(Path(args.data).stem, i))
+        nib.save(fn_nii, './out/{}_fn{}'.format(timestr, i))
 
    
