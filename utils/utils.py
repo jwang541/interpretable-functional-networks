@@ -8,10 +8,7 @@ import random
 # onto the columnspace of X.
 def lstsq_solution(x, y):
     return torch.mm(torch.pinverse(x), y)
-# def lstsq_solution(x, y):
-#     return torch.mm(
-#         torch.pinverse(torch.mm(x.t(), x)),
-#         torch.mm(x.t(), y))
+
 
 # Differentiable function to compute the lstsq residuals of the projection of 
 # the columns of Y onto the columnspace of X.
