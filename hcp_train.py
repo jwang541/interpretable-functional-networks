@@ -55,7 +55,8 @@ if __name__ == '__main__':
     trainset = HcpDataset(data_index='/cbica/home/lihon/comp_space/bbl_pnc_resting/hcp_sm_data/hcp_sm6_t400_tra.txt',
                           mask_file='/cbica/home/lihon/comp_space/bbl_pnc_resting/rnn_autoencoder/scripts/mask_thr0p5_wmparc.2_cc_3mm.nii.gz',
                           print_params=True,
-                          normalization='voxelwise')
+                          normalization='voxelwise',
+                          crop_s=(2,0,2), crop_e=(58,72,58))
     print()
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
