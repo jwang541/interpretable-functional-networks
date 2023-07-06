@@ -43,12 +43,6 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # make output directory if it doesn't already exist
-    if not os.path.exists('./out'):
-        os.makedirs('./out')
-
-    ###################################################################################################################
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = 'cpu'
 
@@ -95,14 +89,19 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    # save each functional network to a .nii file
+    # make output directory if it doesn't already exist
     timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    outdir = './out/{}'.format(timestr)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    # save each functional network to a .nii file
     for i in range(fns.shape[0]):
         fn = fns[i]
         fn = torch.permute(fn, (2, 1, 0))
         fn = fn.cpu()
         fn = fn.numpy()
         fn_nii = nib.Nifti1Image(fn, affine=None)
-        nib.save(fn_nii, './out/{}_fn{}'.format(timestr, i))
+        nib.save(fn_nii, os.path.join(outdir, 'fn{}'.format(i)))
 
    

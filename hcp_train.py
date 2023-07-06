@@ -1,5 +1,6 @@
 import os
 import argparse
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -72,14 +73,16 @@ if __name__ == '__main__':
 
     ###################################################################################################################
 
-    if not os.path.exists('./out'):
-        os.makedirs('./out')
+    timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    outdir = './out/{}'.format(timestr)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     ###################################################################################################################
 
     for epoch in range(args.epochs):
         if epoch % 1 == 0:
-            torch.save(model.state_dict(), './out/e{}.pt'.format(epoch))
+            torch.save(model.state_dict(), os.path.join(outdir, 'e{}.pt'.format(epoch)))
 
         model.train()
         train_loss = 0
@@ -121,4 +124,4 @@ if __name__ == '__main__':
 
         print(epoch, train_loss)
 
-    torch.save(model.state_dict(), './out/e{}.pt'.format(args.epochs))
+    torch.save(model.state_dict(), os.path.join(outdir, 'e{}.pt'.format(args.epochs)))
