@@ -44,9 +44,9 @@ class HcpDataset(Dataset):
             tps = random.sample(range(data_proxy.shape[3]), 20)
             tps.sort()
 
-            data = data_proxy.dataobj[crop_s[2]:crop_e[2],
+            data = data_proxy.dataobj[crop_s[0]:crop_e[0],
                                       crop_s[1]:crop_e[1],
-                                      crop_s[0]:crop_e[0], 
+                                      crop_s[2]:crop_e[2], 
                                       :]
             data = data[..., tps]
             data = data.astype(np.float32)
@@ -55,9 +55,9 @@ class HcpDataset(Dataset):
             
             mask_proxy = nib.load(self.mask_file)
             mask = mask_proxy.get_fdata(dtype=np.float32)
-            mask = mask[crop_s[2]:crop_e[2],
+            mask = mask[crop_s[0]:crop_e[0],
                         crop_s[1]:crop_e[1],
-                        crop_s[0]:crop_e[0]]
+                        crop_s[2]:crop_e[2]]
             mask = torch.from_numpy(mask)
             mask = torch.permute(mask, (2, 1, 0))
             mask = mask.bool()

@@ -1,5 +1,4 @@
 import os
-import argparse
 from datetime import datetime
 
 import torch
@@ -8,37 +7,22 @@ import nibabel as nib
 
 from models import Model
 from utils import *
+from config import *
 
 
 
 # Estimate functional networks, save the results to .nii files in ./out
 
-# Usage: deploy.py -k NUMBER_FNS -w WEIGHTS -d DATA [-m MASK]
-
-# Required:
-#   -k            : number of functional networks (must match model weights)
-#   -w, --weights : model weights file
-#   -d, --data    : .nii fMRI data file
-
-# Optional:
-#   -m, --mask    : .nii fMRI mask file, if not provided then no mask will be used
-
 if __name__ == '__main__':
     
-    # parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-k', type=int, help='number of functional networks (must match model weights)', required=True)
-    parser.add_argument('-w', '--weights', type=str, help='path to weights file', required=True)
-    parser.add_argument('-d', '--data', type=str, help='path to .nii fMRI data file', required=True)
-    parser.add_argument('-m', '--mask', type=str, help='path to .nii fMRI mask file', required=False)
+    config = deploy_config()
 
     # print arguments
-    args = parser.parse_args()
     print('- Arguments -')
-    print('Number of functional networks (k):', args.k)
-    print('Weights file:', args.weights)
-    print('Data file:', args.data)
-    print('Mask file:', args.mask if args.mask is not None else 'N/A')
+    print('Number of functional networks (k):', config.k)
+    print('Weights file:', config.weights)
+    print('Data file:', config.data)
+    print('Mask file:', config.mask if config.mask is not None else 'N/A')
     print()
 
     ###################################################################################################################
@@ -50,17 +34,24 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         # load model weights
-        model = Model(k_maps=args.k)
+        model = Model(k_maps=config.k)
         model = model.to(device)
-        model.load_state_dict(torch.load(args.weights))
+        model.load_state_dict(torch.load(config.weights))
         model.eval()
 
     ###################################################################################################################
 
     with torch.no_grad():
         # load and preprocess fMRI data
-        data_nii = nib.load(args.data)
+        data_nii = nib.load(config.data)
         data = data_nii.get_fdata()
+        crop_s = (0, 0, 0) if config.crop_s is None else config.crop_s
+        crop_e = (data.shape[0:3]) if config.crop_e is None else config.crop_e
+        data = data[crop_s[0]:crop_e[0],
+                    crop_s[1]:crop_e[1],
+                    crop_s[2]:crop_e[2], 
+                    :]
+
         data = torch.from_numpy(data)
         data = data.to(device)
         data = torch.permute(data, (3, 2, 1, 0))
@@ -71,11 +62,15 @@ if __name__ == '__main__':
         data = data.float()
 
         # load and preprocess fMRI mask
-        if args.mask is None:
+        if config.mask is None:
             mask = torch.ones_like(data[0], dtype=bool)
         else:
-            mask_nii = nib.load(args.mask)
+            mask_nii = nib.load(config.mask)
             mask = mask_nii.get_fdata()
+            mask = mask[crop_s[0]:crop_e[0],
+                        crop_s[1]:crop_e[1],
+                        crop_s[2]:crop_e[2]]
+
             mask = torch.from_numpy(mask)
             mask = mask.to(device)
             mask = torch.permute(mask, (2, 1, 0))

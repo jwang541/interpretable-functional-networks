@@ -28,30 +28,25 @@ if __name__ == '__main__':
 
     # parse arguments
     parser = argparse.ArgumentParser()
-
-    # train mode arguments
     train_mode_args = parser.add_mutually_exclusive_group(required=True)
     train_mode_args.add_argument('-p', '--pretrain', action='store_true', help='pretrain the model')
     train_mode_args.add_argument('-f', '--finetune', action='store_true', help='finetune the model')
+    args = parser.parse_args()
 
-    # dataset argument
-    parser.add_argument('-d', '--dataset', type=str, required=True, help='path to dataset (must be compatible with SimtbDataset class)')
-
-    # hyperparameter arguments
-    parser.add_argument('-c', '--checkpoint', type=str, help='path to checkpoint weights file')
-    parser.add_argument('-e', '--epochs', type=int, default=300, help='number of epochs (default: 300)')
-    parser.add_argument('-l', '--lr', type=float, default=0.001, help='learning rate (default: 0.0001)')
-    parser.add_argument('-t', '--trade_off', type=float, default=10, help='hoyer trade off parameter (default: 10)')
+    if args.pretrain:
+        config = simtb_pretrain_config()
+    else:
+        config = simtb_finetune_config()
 
     # parse and print command line arguments
     args = parser.parse_args()
     print('- Training parameters -')
-    print('train mode:', 'finetune' if args.finetune else 'pretrain')
-    print('checkpoint path:', args.checkpoint)
-    print('epochs:', args.epochs)
-    print('learning rate:', args.lr)
-    if args.finetune:
-        print('sparsity trade-off:', args.trade_off)
+    print('train mode:', 'pretrain' if config.mode == 0 else 'finetune')
+    if config.mode == 1:
+        print('sparsity trade-off:', config.tradeoff)
+    print('checkpoint path:', config.checkpoint)
+    print('epochs:', config.epochs)
+    print('learning rate:', config.lr)
     print()
 
     ###################################################################################################################
@@ -59,29 +54,31 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print('- Trainset parameters -')
-    trainset = SimtbDataset(args.dataset, train=True, print_params=True, normalization='voxelwise')
+    trainset = SimtbDataset(config.data, train=True, print_params=True, 
+                            normalization='global' if config.norm == 0 else 'voxelwise')
     print()
 
     print('- Testset parameters -')
-    testset = SimtbDataset(args.dataset, train=False, print_params=True, normalization='voxelwise')
+    testset = SimtbDataset(config.data, train=False, print_params=True, 
+                           normalization='global' if config.norm == 0 else 'voxelwise')
     print()
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
     testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=True)
 
-    model = Model(k_maps=20)
+    model = Model(k_maps=config.k)
     model = model.to(device)
-    if args.checkpoint is not None:
-        model.load_state_dict(torch.load(args.checkpoint))
+    if config.checkpoint is not None:
+        model.load_state_dict(torch.load(config.checkpoint))
 
-    optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), config.lr)
 
     timestr = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     outdir = './out/{}'.format(timestr)
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    for epoch in range(args.epochs):
+    for epoch in range(config.epochs):
         if epoch % 10 == 0:
             torch.save(model.state_dict(), os.path.join(outdir, 'e{}.pt'.format(epoch)))
 
@@ -104,10 +101,10 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                if args.finetune:
-                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
-                else:
+                if config.mode == 0:
                     loss = clustering_loss(out_masked, in_masked)
+                else:
+                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
                 
                 loss.backward()
                 
@@ -133,14 +130,14 @@ if __name__ == '__main__':
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
 
-                if args.finetune:
-                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + args.trade_off * hoyer_loss(out_masked)
-                else:
+                if config.mode == 0:
                     loss = clustering_loss(out_masked, in_masked)
+                else:
+                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
 
                 eval_loss += loss.item()
 
         print('[{}]\t\ttrain loss: {:.3f}\t\teval loss: {:.3f}'
               .format(epoch + 1, train_loss / len(trainloader.dataset), eval_loss / len(testloader.dataset)))
 
-    torch.save(model.state_dict(), os.path.join(outdir, 'e{}.pt'.format(args.epochs)))
+    torch.save(model.state_dict(), os.path.join(outdir, 'e{}.pt'.format(config.epochs)))
