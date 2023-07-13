@@ -81,21 +81,19 @@ if __name__ == '__main__':
         model.train()
         train_loss = 0
         for i, data in enumerate(trainloader):
-            mri, mask = data
-            mri = mri.float().to(device)
+            fn_mri, loss_mri, mask = data
+            fn_mri = fn_mri.float().to(device)
+            loss_mri = loss_mri.float().to(device)
             mask = mask.bool().to(device)
 
-            for n in range(mri.shape[0]):
+            for n in range(fn_mri.shape[0]):
                 optimizer.zero_grad()
 
-                model_in = mri[n]
-                # model_in = model_in[0:10]
-                model_out = model(model_in, mask[n])
-                # print('forward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
+                fns = model(fn_mri[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(model_in, (model_in.shape[0], -1))
-                out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
+                in_flat = torch.reshape(loss_mri[n], (loss_mri[n].shape[0], -1))
+                out_flat = torch.reshape(fns, (fns.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]
                 out_masked = out_flat[:, mask_flat]
@@ -106,15 +104,11 @@ if __name__ == '__main__':
                     loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
                 
                 loss.backward()
-                # print('backward', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
 
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 train_loss += loss.item()
 
                 optimizer.step()
-
-                # print('optimizer', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 'GB')
-                # exit()
 
         print(epoch, train_loss)
 

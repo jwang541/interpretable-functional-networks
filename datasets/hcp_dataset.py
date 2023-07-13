@@ -41,14 +41,14 @@ class HcpDataset(Dataset):
             data_proxy = nib.load(self.data_files[i])
             crop_s = (0, 0, 0) if self.crop_s is None else self.crop_s
             crop_e = (data_proxy.shape[0:3]) if self.crop_e is None else self.crop_e
-            tps = random.sample(range(data_proxy.shape[3]), 20)
-            tps.sort()
+            # tps = random.sample(range(data_proxy.shape[3]), 20)
+            # tps.sort()
 
             data = data_proxy.dataobj[crop_s[0]:crop_e[0],
                                       crop_s[1]:crop_e[1],
                                       crop_s[2]:crop_e[2], 
                                       :]
-            data = data[..., tps]
+            # data = data[..., tps]
             data = data.astype(np.float32)
             data = torch.from_numpy(data)
             data = torch.permute(data, (3, 2, 1, 0))
@@ -71,5 +71,14 @@ class HcpDataset(Dataset):
             else:
                 raise Exception('unknown normalization type')
 
-            return data, mask
+            fn_tps = random.sample(range(data_proxy.shape[3]), 20)
+            loss_tps = random.sample(range(data_proxy.shape[3]), 100)
+
+            fn_tps.sort()
+            loss_tps.sort()
+
+            fn_data = data[fn_tps]
+            loss_data = data[loss_tps]
+
+            return fn_data, loss_data, mask
 
