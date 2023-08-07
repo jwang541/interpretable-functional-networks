@@ -50,7 +50,7 @@ class Model(nn.Module):
         x = x * mask
         x = x.unsqueeze(1)
 
-        # Apply UNet 
+        # Apply UNet to estimate functional networks
         x1 = self.norm1(F.leaky_relu(self.conv1(x), negative_slope=0.01))
         x2 = self.norm2(F.leaky_relu(F.max_pool3d(self.conv2(x1), 2, ceil_mode=True), negative_slope=0.01))
         x3 = self.norm3(F.leaky_relu(F.max_pool3d(self.conv3(x2), 2, ceil_mode=True), negative_slope=0.01))
@@ -66,7 +66,7 @@ class Model(nn.Module):
 
         # Mask and normalize UNet maps so they have a mean of 1.0
         maps = maps * mask
-        maps = maps / (torch.mean(maps, dim=(2, 3, 4), keepdims=True) + self.eps)
+        maps = maps / (torch.mean(maps, dim=(2, 3, 4), keepdim=True) + self.eps)
 
         # Extract attention weights from bottleneck layer
         proj = F.relu(self.proj(x4))
@@ -78,5 +78,8 @@ class Model(nn.Module):
         # Weight normalized maps with attention values, then average to get combined maps
         y = torch.einsum('tk, tkxyz -> tkxyz', weights, maps)
         y = torch.mean(y, dim=0)
+
+        # Divide by means so each map has mean intensity 1
+        y = y / (torch.mean(y, dim=(1, 2, 3), keepdim=True) + self.eps)
         return y
 
