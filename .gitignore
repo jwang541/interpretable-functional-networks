@@ -3,3 +3,6 @@ __pycache__/
 out/
 data/
 .idea/
+deploy.sh
+hcp_train.sh
+simtb_train.sh
