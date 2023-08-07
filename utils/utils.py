@@ -27,6 +27,12 @@ def hoyer_loss(x, eps=1e-8):
                 torch.sqrt(torch.sum(torch.square(x), dim=1) + eps))))
 
 
+def entropy_loss(x):
+    x = x + 1e-8
+    x = x / torch.sum(x, dim=0)
+    return -1 * torch.sum(x * torch.log(x))
+
+
 # Clustering loss (for pretraining)
 def clustering_loss(x, y, eps=1e-8):
     spatial_mass = torch.sum(x, dim=1)
