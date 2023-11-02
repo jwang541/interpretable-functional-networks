@@ -58,6 +58,19 @@ class SimtbDataset(Dataset):
             x = torch.permute(torch_dat, (3, 2, 1, 0))
             mask = self.mask
 
+            # a = x / torch.mean(x, dim=0)
+            # return a * mask, a * mask, mask
+
+            # a = (x - torch.min(x)) / (torch.max(x) - torch.min(x))
+            
+            # a = (x - torch.min(x, dim=0)[0]) / (torch.max(x, dim=0)[0] - torch.min(x, dim=0)[0])
+            # b = (x - torch.min(x, dim=0)[0]) / (torch.max(x, dim=0)[0] - torch.min(x, dim=0)[0])
+            # return a * mask, b * mask, mask
+            
+            a = (x - torch.mean(x)) / (torch.std(x) + self.eps)
+            b = (x - torch.mean(x, dim=0)) / (torch.std(x, dim=0) + self.eps)
+            return a * mask, b * mask, mask
+
             if self.normalization == 'global':
                 std, mu = torch.std_mean(x)
                 x = (x - mu) / (std + self.eps) * mask

@@ -74,11 +74,6 @@ if __name__ == '__main__':
         data = data.to(device)
         data = torch.permute(data, (3, 2, 1, 0))
 
-        # voxelwise normalization
-        std, mu = torch.std_mean(data, dim=0)
-        data = (data - mu) / std
-        data = data.float()
-
         # load and preprocess fMRI mask
         if args.mask is None:
             mask = torch.ones_like(data[0], dtype=bool)
@@ -89,6 +84,15 @@ if __name__ == '__main__':
             mask = mask.to(device)
             mask = torch.permute(mask, (2, 1, 0))
             mask = torch.greater(mask, 0.01)
+
+        # voxelwise normalization
+        # std, mu = torch.std_mean(data, dim=0)
+
+        # global normalization
+        std, mu = torch.std_mean(data)
+
+        data = (data - mu) / (std + 1e-8)
+        data = data.float()
 
     ###################################################################################################################
     

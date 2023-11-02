@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         # load model weights
-        model = Model(k_maps=config.k)
+        model = Model(k_maps=config.k, debug=True)
         model = model.to(device)
         model.load_state_dict(torch.load(config.weights))
         model.eval()
@@ -57,13 +57,17 @@ if __name__ == '__main__':
         data = torch.permute(data, (3, 2, 1, 0))
 
         # voxelwise normalization
-        std, mu = torch.std_mean(data, dim=0)
-        data = (data - mu) / (std + 1e-8)
-        data = data.float()
+        # std, mu = torch.std_mean(data, dim=0)
+        # data = (data - mu) / (std + 1e-8)
+        # data = data.float()
+
+        # data = (data - torch.min(data, dim=0)[0]) / (torch.max(data, dim=0)[0] - torch.min(data, dim=0)[0])
+        gdata = (data - torch.mean(data)) / (torch.std(data) + 1e-8)
+        gdata = gdata.float()
 
         # load and preprocess fMRI mask
         if config.mask is None:
-            mask = torch.ones_like(data[0], dtype=bool)
+            mask = torch.ones_like(gdata[0], dtype=bool)
         else:
             mask_nii = nib.load(config.mask)
             mask = mask_nii.get_fdata()
@@ -80,8 +84,8 @@ if __name__ == '__main__':
     
     with torch.no_grad():
         # estimate functional networks
-        fns = model(data * mask, mask) * mask
-
+        fns = model(gdata * mask, mask) * mask
+        
     ###################################################################################################################
 
     # make output directory if it doesn't already exist
@@ -99,4 +103,3 @@ if __name__ == '__main__':
         fn_nii = nib.Nifti1Image(fn, affine=None)
         nib.save(fn_nii, os.path.join(outdir, 'fn{}'.format(i)))
 
-   

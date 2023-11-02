@@ -5,9 +5,11 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 
+
 from datasets import SimtbDataset
 from models import Model
 from utils import *
+from config import *
 
 
 
@@ -85,17 +87,18 @@ if __name__ == '__main__':
         model.train()
         train_loss = 0
         for i, data in enumerate(trainloader):
-            mri, mask = data
-            mri = mri.float().to(device)
+            mri_t, mri_v, mask = data
+            mri_t = mri_t.float().to(device)
+            mri_v = mri_v.float().to(device)
             mask = mask.bool().to(device)
 
-            for n in range(mri.shape[0]):
+            for n in range(mri_t.shape[0]):
                 optimizer.zero_grad()
 
-                model_out = model(mri[n], mask[n])
+                model_out = model(mri_t[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
+                in_flat = torch.reshape(mri_v[n], (mri_v[n].shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]
@@ -104,7 +107,11 @@ if __name__ == '__main__':
                 if config.mode == 0:
                     loss = clustering_loss(out_masked, in_masked)
                 else:
-                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
+                    # loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
+                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + 1.0 * entropy_loss(out_masked)
+                    if i % 20 == 0:
+                        # print(config.tradeoff * hoyer_loss(out_masked))
+                        print(entropy_loss(out_masked))
                 
                 loss.backward()
                 
@@ -116,15 +123,16 @@ if __name__ == '__main__':
         model.eval()
         eval_loss = 0
         for i, data in enumerate(testloader):
-            mri, mask = data
-            mri = mri.float().to(device)
+            mri_t, mri_v, mask = data
+            mri_t = mri_t.float().to(device)
+            mri_v = mri_v.float().to(device)
             mask = mask.bool().to(device)
 
-            for n in range(mri.shape[0]):
-                model_out = model(mri[n], mask[n])
+            for n in range(mri_t.shape[0]):
+                model_out = model(mri_t[n], mask[n])
 
                 mask_flat = torch.flatten(mask[n])
-                in_flat = torch.reshape(mri[n], (mri[n].shape[0], -1))
+                in_flat = torch.reshape(mri_v[n], (mri_v[n].shape[0], -1))
                 out_flat = torch.reshape(model_out, (model_out.shape[0], -1))
 
                 in_masked = in_flat[:, mask_flat]
@@ -133,7 +141,8 @@ if __name__ == '__main__':
                 if config.mode == 0:
                     loss = clustering_loss(out_masked, in_masked)
                 else:
-                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
+                    # loss = lstsq_loss(out_masked.t(), in_masked.t()) + config.tradeoff * hoyer_loss(out_masked)
+                    loss = lstsq_loss(out_masked.t(), in_masked.t()) + 1.0 * entropy_loss(out_masked)
 
                 eval_loss += loss.item()
 

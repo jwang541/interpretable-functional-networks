@@ -8,14 +8,22 @@ class DeployConfig:
         self.crop_s = None
         self.crop_e = None
 
+# def deploy_config():
+#     config = DeployConfig()
+#     config.weights = './out/2023_07_07_10_15_56/e1.pt'
+#     config.data = '/cbica/home/lihon/comp_space/bbl_pnc_resting/hcp_sm_data/rs3_sm6_t400_data/rs3_sm6_t400_180432.nii.gz'
+#     config.mask = '/cbica/home/lihon/comp_space/bbl_pnc_resting/rnn_autoencoder/scripts/mask_thr0p5_wmparc.2_cc_3mm.nii.gz'
+#     config.k = 17
+#     config.crop_s = (2, 0, 2)
+#     config.crop_e = (58, 72, 58)
+#     return config
+
 def deploy_config():
     config = DeployConfig()
-    config.weights = './out/2023_07_07_10_15_56/e1.pt'
-    config.data = '/cbica/home/lihon/comp_space/bbl_pnc_resting/hcp_sm_data/rs3_sm6_t400_data/rs3_sm6_t400_180432.nii.gz'
-    config.mask = '/cbica/home/lihon/comp_space/bbl_pnc_resting/rnn_autoencoder/scripts/mask_thr0p5_wmparc.2_cc_3mm.nii.gz'
-    config.k = 17
-    config.crop_s = (2, 0, 2)
-    config.crop_e = (58, 72, 58)
+    config.weights = './out/2023_08_01_12_24_03/e300.pt'
+    config.data = 'data/simtb_data/data/sim_subject_100_DATA.nii'
+    config.mask = 'data/simtb_data/mask.nii'
+    config.k = 20
     return config
 
 class TrainConfig:
@@ -78,7 +86,7 @@ def simtb_finetune_config():
     config.mode = 1
     config.norm = 1
     config.k = 20
-    # config.checkpoint = 'weights/simtb_pre_300.pt'
+    # config.checkpoint = 'out/2023_07_25_17_53_26/e100.pt'
     config.epochs = 300
     config.lr = 1e-4
     config.tradeoff = 10.0
